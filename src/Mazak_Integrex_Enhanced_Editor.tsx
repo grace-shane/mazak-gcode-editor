@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { AlertCircle, Info, CheckCircle, Wrench, Cpu, GitBranch } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { AlertCircle, Info, CheckCircle, Wrench, Cpu, GitBranch, Upload, Download, FileText } from 'lucide-react';
 
 // ============================================================================
 // CONSTANTS - Based on Mazak Programming Manual
@@ -253,10 +253,44 @@ N10001 M30;`);
     upper: { spindle: null, milling: false, crossMachining: false },
     lower: { spindle: null, milling: false, crossMachining: false }
   });
+  const [currentFileName, setCurrentFileName] = useState('Sample Program');
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     parseGCode(fullCode);
   }, [fullCode]);
+
+  // File upload handler
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target.result;
+        setFullCode(content);
+        setCurrentFileName(file.name);
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  // Trigger file input click
+  const handleOpenFile = () => {
+    fileInputRef.current?.click();
+  };
+
+  // Download current code as file
+  const handleDownloadFile = () => {
+    const blob = new Blob([fullCode], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = currentFileName.endsWith('.nc') ? currentFileName : `${currentFileName}.nc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const parseGCode = (code) => {
     const lines = code.split('\n');
@@ -502,6 +536,44 @@ N10001 M30;`);
                 <p className="text-xs text-slate-400 tracking-wide">MATRIX CONTROL • DUAL TURRET SYSTEM</p>
               </div>
             </div>
+          </div>
+
+          {/* File Controls */}
+          <div className="flex items-center gap-4">
+            {/* Current File Name */}
+            <div className="flex items-center gap-2 bg-slate-800 px-3 py-2 rounded border border-slate-700">
+              <FileText className="w-4 h-4 text-blue-400" />
+              <span className="text-sm text-slate-300">{currentFileName}</span>
+            </div>
+
+            {/* File Action Buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={handleOpenFile}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-semibold text-sm transition-colors duration-200 shadow-lg hover:shadow-xl"
+                title="Open G-Code file"
+              >
+                <Upload className="w-4 h-4" />
+                Open File
+              </button>
+              <button
+                onClick={handleDownloadFile}
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 px-4 py-2 rounded font-semibold text-sm transition-colors duration-200 shadow-lg hover:shadow-xl"
+                title="Download current G-Code"
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </button>
+            </div>
+
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".nc,.NC,.txt,.TXT,.gcode,.GCODE"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
           </div>
           
           {/* Stats Panel */}
